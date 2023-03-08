@@ -14,8 +14,10 @@ import weiner.marta.app.checkpointer.repository.CheckpointRepository;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
+import java.util.regex.MatchResult;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -46,34 +48,29 @@ public class CheckpointService {
 
         CheckPoint checkPoint = new CheckPoint();
         checkPoint.setCreatedOn(new Date());
-
+        checkPoint.setContent(content);
         AppUser user = appUserRepository.findFirstByUsername(username);
-
         checkPoint.setUser(user);
 
-        if (user == null){
-            throw new UserNotFoundException("Użytkownik " + user + " nie istnieje w bazie danych.");
+        if (user == null) {
+            throw new UserNotFoundException("User " + user + " doesn't exist in database.");
         }
 
-        Matcher matcher = Pattern.compile("@([a-zA-Z0-9_]+)").matcher(content);
-        List<AppUser> mentionedUsers = new ArrayList<>();
+        List<String> matches = Pattern.compile("@([a-zA-Z0-9_]+)")
+                .matcher(content)
+                .results()
+                .map(MatchResult::group)
+                .collect(Collectors.toList());
 
-        while (matcher.find()) {
-            if (matcher.find()) {
-                String mentionedUserName = matcher.group(1);
-                AppUser mentionedUser = appUserRepository.findFirstByUsername(mentionedUserName);
-                System.out.println(mentionedUser);
+        for (String match : matches) {
+            String mentionedUserName = match.substring(1);
+            AppUser mentionedUser = appUserRepository.findFirstByUsername(mentionedUserName);
 
-                if (mentionedUser != null) {
-                    checkPoint.setContent(content);
-                    mentionedUsers.add(mentionedUser);
-                    checkpointRepository.save(checkPoint);
-                } else {
-                    System.out.println("Użytkownik @" + mentionedUserName + " nie istnieje w bazie danych.");
-                    throw new UserNotFoundException("Użytkownik " + mentionedUserName + " nie istnieje w bazie danych.");
-                }
+            if (mentionedUser == null) {
+                throw new UserNotFoundException("User " + mentionedUserName + " doesn't exist in database.");
             }
         }
+        checkpointRepository.save(checkPoint);
     }
 
     public List<CheckPoint> getAllByTag(String tag) {

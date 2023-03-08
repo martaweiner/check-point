@@ -25,5 +25,4 @@ public class CheckPoint {
 
     @Column(name = "created_on", nullable = false)
     private Date createdOn;
-
 }
